@@ -4,6 +4,7 @@ using System.Text;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -76,7 +77,9 @@ public class LedgerForm : Form {
         currency.DropDownStyle=ComboBoxStyle.DropDownList; foreach(string code in Currencies)currency.Items.Add(new CurrencyItem(code)); currency.SelectedIndex=0; AddField(editor,L.T("币种（CNY 人民币 / JPY 日元）"),currency);
         AddField(editor,L.T("金额（填写正数）"),amount); category.Items.AddRange(new string[]{L.T("餐饮"),L.T("交通"),L.T("购物"),L.T("住房"),L.T("娱乐"),L.T("医疗"),L.T("工资"),L.T("奖金"),L.T("其他")}); category.Text=L.T("餐饮"); AddField(editor,L.T("分类"),category);
         note.MaxLength=1000; AddField(editor,L.T("备注"),note); save=Btn(L.T("保存这笔账"),Save); save.Width=235; save.BackColor=Color.FromArgb(25,111,95); save.ForeColor=Color.White; editor.Controls.Add(save);
-        var actions=new FlowLayoutPanel{Width=240,Height=78}; actions.Controls.Add(Btn(L.T("编辑所选"),delegate{Edit();})); actions.Controls.Add(Btn(L.T("删除所选"),Delete)); editor.Controls.Add(actions); editor.Controls.Add(Btn(L.T("取消编辑 / 清空"),delegate{Reset();}));
+        var actions=new FlowLayoutPanel{Width=240,Height=78}; actions.Controls.Add(Btn(L.T("编辑所选"),delegate{Edit();})); actions.Controls.Add(Btn(L.T("删除所选"),Delete)); editor.Controls.Add(actions);
+        var googleCalendar=Btn(L.T("添加到 Google 日历"),AddToGoogleCalendar); googleCalendar.Width=235; editor.Controls.Add(googleCalendar);
+        editor.Controls.Add(Btn(L.T("取消编辑 / 清空"),delegate{Reset();}));
         status.Dock=DockStyle.Fill; status.TextAlign=ContentAlignment.BottomLeft; status.ForeColor=Color.DimGray; status.AutoEllipsis=true; status.Text=L.T("数据库：")+dbPath; root.Controls.Add(status,0,4);
         month.ValueChanged+=delegate{RefreshData();}; all.CheckedChanged+=delegate{month.Enabled=!all.Checked;RefreshData();}; filter.SelectedIndexChanged+=delegate{RefreshData();}; search.TextChanged+=delegate{RefreshData();}; FormClosed+=delegate{db.Dispose();}; RegisterText(this); language.SelectedIndexChanged+=delegate{ChangeLanguage();}; RefreshData();
     }
@@ -142,6 +145,27 @@ public class LedgerForm : Form {
     }
     void Delete() { long id=Selected(); if(MessageBox.Show(this,L.T("确定删除所选账目？此操作无法撤销。"),L.T("删除账目"),MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return; db.Run("DELETE FROM entries WHERE id="+id); if(editing==id)Reset();RefreshData(); }
     void Reset() { editing=0; editorTitle.Text=L.T("记一笔");save.Text=L.T("保存这笔账"); amount.Clear();note.Clear();day.Value=DateTime.Today; }
+    public static string GoogleCalendarUrl(string entryDay,string entryKind,long entryAmount,string entryCurrency,string entryCategory,string entryNote) {
+        DateTime start=DateTime.ParseExact(entryDay,"yyyy-MM-dd",CultureInfo.InvariantCulture);
+        string dates=start.ToString("yyyyMMdd",CultureInfo.InvariantCulture)+"/"+start.AddDays(1).ToString("yyyyMMdd",CultureInfo.InvariantCulture);
+        string title=L.T(entryKind)+" · "+L.CategoryText(entryCategory)+" · "+L.Currency(entryCurrency)+" "+Money(entryAmount,entryCurrency);
+        StringBuilder details=new StringBuilder();
+        details.Append(L.T("类型")+": "+L.T(entryKind)+Environment.NewLine);
+        details.Append(L.T("金额")+": "+L.Currency(entryCurrency)+" "+Money(entryAmount,entryCurrency)+Environment.NewLine);
+        details.Append(L.T("分类")+": "+L.CategoryText(entryCategory));
+        if(!String.IsNullOrWhiteSpace(entryNote))details.Append(Environment.NewLine+L.T("备注")+": "+entryNote.Trim());
+        details.Append(Environment.NewLine+L.T("来源：轻记账"));
+        return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+Uri.EscapeDataString(title)+"&dates="+dates+"&details="+Uri.EscapeDataString(details.ToString());
+    }
+    void AddToGoogleCalendar() {
+        long id=Selected();
+        DataTable t=db.Run("SELECT day,kind,amount,currency,category,note FROM entries WHERE id="+id);
+        if(t.Rows.Count==0)throw new Exception(L.T("这条记录已不存在。"));
+        DataRow r=t.Rows[0];
+        string url=GoogleCalendarUrl(r[0].ToString(),r[1].ToString(),long.Parse(r[2].ToString()),r[3].ToString(),r[4].ToString(),r[5].ToString());
+        Process.Start(url);
+        status.Text=L.T("已打开 Google 日历，请在浏览器中确认保存。")+" · "+L.T("数据库：")+dbPath;
+    }
     void Backup() {
         using(var d=new SaveFileDialog{Filter=L.T("SQLite 数据库|*.db"),FileName=L.T("账本备份-")+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".db"})if(d.ShowDialog(this)==DialogResult.OK){if(string.Equals(Path.GetFullPath(d.FileName),Path.GetFullPath(dbPath),StringComparison.OrdinalIgnoreCase))throw new Exception(L.T("请选择与当前数据库不同的备份路径。")); db.Backup(d.FileName);MessageBox.Show(this,L.T("备份已保存：\n")+d.FileName,L.T("备份完成"));}
     }
@@ -200,6 +224,7 @@ public static class L {
         {"保存这笔账", new string[]{"保存这笔账","記録を保存","Save entry"}},
         {"编辑所选", new string[]{"编辑所选","選択項目を編集","Edit selected"}},
         {"删除所选", new string[]{"删除所选","選択項目を削除","Delete selected"}},
+        {"添加到 Google 日历", new string[]{"添加到 Google 日历","Google カレンダーに追加","Add to Google Calendar"}},
         {"取消编辑 / 清空", new string[]{"取消编辑 / 清空","編集取消 / クリア","Cancel / Clear"}},
         {"数据库：", new string[]{"数据库：","データベース：","Database: "}},
         {"操作未完成", new string[]{"操作未完成","操作失敗","Action failed"}},
@@ -207,6 +232,8 @@ public static class L {
         {"金额", new string[]{"金额","金額","Amount"}},
         {"币种", new string[]{"币种","通貨","Currency"}},
         {"读取失败", new string[]{"读取失败","読み込み失敗","Read failed"}},
+        {"来源：轻记账", new string[]{"来源：轻记账","作成元：かんたん家計簿","Source: Light Ledger"}},
+        {"已打开 Google 日历，请在浏览器中确认保存。", new string[]{"已打开 Google 日历，请在浏览器中确认保存。","Google カレンダーを開きました。ブラウザで保存を確認してください。","Google Calendar is open. Confirm and save the event in your browser."}},
         {"已保存 · 数据库：", new string[]{"已保存 · 数据库：","保存済み · データベース：","Saved · Database: "}},
         {"编辑账目 #", new string[]{"编辑账目 #","記録を編集 #","Edit entry #"}},
         {"保存修改", new string[]{"保存修改","変更を保存","Save changes"}},
