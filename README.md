@@ -1,4 +1,4 @@
-# 轻记账
+﻿# 轻记账
 
 Windows 本地多币种记账软件，使用 SQLite 保存账目。
 
@@ -26,5 +26,12 @@ Windows 本地多币种记账软件，使用 SQLite 保存账目。
 - `LedgerDb.cs`：SQLite 数据访问与完整备份
 - `Localization.cs`：中文、日文和英文文本及币种名称
 - `CurrencyItem.cs`：币种选择项模型
+- `GoogleDriveBackup.cs`：Google Drive 同步文件夹的配置与 SQLite 备份
 
 `build.ps1` 会自动编译仓库根目录下的全部 `.cs` 文件。
+
+## Google Drive 备份
+
+点击“备份到 Google Drive”。首次使用时选择 Google Drive 桌面版正在同步的文件夹；以后可以直接备份，也可以在确认窗口中选择“否”更换文件夹。程序使用 SQLite 完整备份生成带时间戳的 `.db` 文件，同一秒内重复备份会自动增加序号。
+
+程序把备份写入本地同步文件夹，Google Drive 桌面版负责上传和显示同步状态。软件不保存 Google 账号、密码、OAuth 令牌或 API 密钥。所选文件夹保存在 `data/google-drive-folder.txt`，该设置不纳入 Git。

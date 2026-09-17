@@ -32,7 +32,7 @@ public class LedgerForm : Form {
         var filters=new FlowLayoutPanel { Dock=DockStyle.Fill }; month.Format=DateTimePickerFormat.Custom; month.CustomFormat="yyyy-MM"; month.ShowUpDown=true; month.Width=115; all.Text=L.T("全部月份"); all.AutoSize=true;
         filter.DropDownStyle=ComboBoxStyle.DropDownList; filter.Items.Add(L.T("全部币种")); foreach(string code in Currencies)filter.Items.Add(new CurrencyItem(code)); filter.SelectedIndex=0; filter.Width=215; search.Width=140;
         filters.Controls.AddRange(new Control[]{month,all,filter,new Label{Text=L.T("搜索分类 / 备注"),AutoSize=true,Margin=new Padding(14,6,4,0)},search});
-        filters.Controls.Add(Btn(L.T("导出 CSV"),Export)); filters.Controls.Add(Btn(L.T("备份数据库"),Backup)); root.Controls.Add(filters,0,1);
+        filters.Controls.Add(Btn(L.T("导出 CSV"),Export)); filters.Controls.Add(Btn(L.T("备份数据库"),Backup)); filters.Controls.Add(Btn(L.T("备份到 Google Drive"),BackupToGoogleDrive)); root.Controls.Add(filters,0,1);
         totals.Dock=DockStyle.Fill; totals.BackColor=Color.White; totals.Multiline=true; totals.ReadOnly=true; totals.ScrollBars=ScrollBars.Vertical; totals.BorderStyle=BorderStyle.None; totals.Text=L.T("暂无记录"); root.Controls.Add(totals,0,2);
         var body=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Padding=new Padding(0,14,0,0)}; body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); body.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,278)); root.Controls.Add(body,0,3);
         grid.Dock=DockStyle.Fill; grid.ReadOnly=true; grid.AllowUserToAddRows=false; grid.AllowUserToDeleteRows=false; grid.SelectionMode=DataGridViewSelectionMode.FullRowSelect; grid.MultiSelect=false; grid.AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill; grid.RowHeadersVisible=false; grid.BackgroundColor=Color.White; grid.BorderStyle=BorderStyle.None; grid.AutoGenerateColumns=true; grid.RowTemplate.Height=32; grid.ColumnHeadersHeight=38; grid.CellDoubleClick+=delegate(object s,DataGridViewCellEventArgs e){if(e.RowIndex>=0) { try{Edit();}catch(Exception ex){MessageBox.Show(this,ex.Message,L.T("操作未完成"));} }}; body.Controls.Add(grid,0,0);
@@ -134,6 +134,19 @@ public class LedgerForm : Form {
     }
     void Backup() {
         using(var d=new SaveFileDialog{Filter=L.T("SQLite 数据库|*.db"),FileName=L.T("账本备份-")+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".db"})if(d.ShowDialog(this)==DialogResult.OK){if(string.Equals(Path.GetFullPath(d.FileName),Path.GetFullPath(dbPath),StringComparison.OrdinalIgnoreCase))throw new Exception(L.T("请选择与当前数据库不同的备份路径。")); db.Backup(d.FileName);MessageBox.Show(this,L.T("备份已保存：\n")+d.FileName,L.T("备份完成"));}
+    }
+    void BackupToGoogleDrive() {
+        string folder=GoogleDriveBackup.LoadFolder();
+        if(Directory.Exists(folder)) {
+            DialogResult answer=MessageBox.Show(this,L.T("备份到以下 Google Drive 文件夹？\n")+folder+Environment.NewLine+Environment.NewLine+L.T("选择“否”可以更换文件夹。"),L.T("备份到 Google Drive"),MessageBoxButtons.YesNoCancel,MessageBoxIcon.Question);
+            if(answer==DialogResult.Cancel)return;
+            if(answer==DialogResult.No)folder=GoogleDriveBackup.ChooseFolder(this,folder);
+        } else folder=GoogleDriveBackup.ChooseFolder(this,folder);
+        if(String.IsNullOrWhiteSpace(folder))return;
+        GoogleDriveBackup.SaveFolder(folder);
+        string backupPath=GoogleDriveBackup.CreateBackup(db,folder,DateTime.Now);
+        MessageBox.Show(this,L.T("Google Drive 备份已创建：\n")+backupPath+Environment.NewLine+Environment.NewLine+L.T("Google Drive 桌面版会负责将此文件同步到云端。"),L.T("备份完成"),MessageBoxButtons.OK,MessageBoxIcon.Information);
+        status.Text=L.T("Google Drive 备份已创建：")+backupPath;
     }
     static string Csv(string s) { if(s.Length>0 && "=+-@\t\r".IndexOf(s[0])>=0)s="'"+s;return "\""+s.Replace("\"","\"\"")+"\""; }
     void Export() {
