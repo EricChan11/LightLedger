@@ -19,3 +19,12 @@ Windows 本地多币种记账软件，使用 SQLite 保存账目。
 选择一条账目后，点击“添加到 Google 日历”。程序会在默认浏览器中打开 Google 日历的新事件确认页，并自动填写账目日期、收支类型、金额、带本地语言名称的币种、分类和备注。事件按全天事件创建；用户在浏览器中选择目标日历并确认保存。
 
 该功能使用 Google Calendar 的事件模板链接，不在本地保存 Google 账号、密码、令牌或 API 密钥。界面和事件内容支持中文、日本語、English。现有 EXE 不会因源码修改而自动更新；运行 `build.ps1` 后才会生成包含此功能的新程序。
+
+## 源码结构
+
+- `LedgerForm.cs`：Windows 界面和记账交互
+- `LedgerDb.cs`：SQLite 数据访问与完整备份
+- `Localization.cs`：中文、日文和英文文本及币种名称
+- `CurrencyItem.cs`：币种选择项模型
+
+`build.ps1` 会自动编译仓库根目录下的全部 `.cs` 文件。
