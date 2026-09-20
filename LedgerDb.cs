@@ -23,7 +23,16 @@ public sealed class LedgerDb : IDisposable {
     public static string Q(string s) { return "'"+s.Replace("'","''")+"'"; }
     public LedgerDb(string path) {
         if(sqlite3_open(Utf(path),out db)!=0) { if(db!=IntPtr.Zero)sqlite3_close(db); throw new Exception(L.T("无法打开数据库：")+path); }
-        Run("PRAGMA busy_timeout=5000; PRAGMA journal_mode=DELETE; CREATE TABLE IF NOT EXISTS entries(id INTEGER PRIMARY KEY, day TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('收入','支出')), amount INTEGER NOT NULL CHECK(amount>0), currency TEXT NOT NULL, category TEXT NOT NULL, note TEXT NOT NULL);");
+        Run("PRAGMA busy_timeout=5000; PRAGMA journal_mode=DELETE; CREATE TABLE IF NOT EXISTS entries(id INTEGER PRIMARY KEY, day TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('收入','支出')), amount INTEGER NOT NULL CHECK(amount>0), currency TEXT NOT NULL, category TEXT NOT NULL, note TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '');");
+        EnsureTimestampColumns();
+    }
+    void EnsureTimestampColumns() {
+        DataTable columns=Run("PRAGMA table_info(entries)"); bool hasCreated=false,hasUpdated=false;
+        foreach(DataRow row in columns.Rows) { string name=row[1].ToString(); if(name=="created_at")hasCreated=true; if(name=="updated_at")hasUpdated=true; }
+        string migration="";
+        if(!hasCreated)migration+="ALTER TABLE entries ADD COLUMN created_at TEXT NOT NULL DEFAULT '';";
+        if(!hasUpdated)migration+="ALTER TABLE entries ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';";
+        if(migration!="")Run("BEGIN IMMEDIATE;"+migration+"COMMIT;");
     }
     public DataTable Run(string sql) {
         DataTable t=new DataTable(); IntPtr err;
@@ -41,4 +50,3 @@ public sealed class LedgerDb : IDisposable {
     }
     public void Dispose() { if(db!=IntPtr.Zero) { sqlite3_close(db); db=IntPtr.Zero; } }
 }
-
