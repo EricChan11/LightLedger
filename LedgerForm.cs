@@ -45,6 +45,7 @@ public class LedgerForm : Form {
         note.MaxLength=1000; AddField(editor,L.T("备注"),note); save=Btn(L.T("保存这笔账"),Save); save.Width=235; save.BackColor=Color.FromArgb(25,111,95); save.ForeColor=Color.White; editor.Controls.Add(save);
         var actions=new FlowLayoutPanel{Width=240,Height=78}; actions.Controls.Add(Btn(L.T("编辑所选"),delegate{Edit();})); actions.Controls.Add(Btn(L.T("删除所选"),Delete)); editor.Controls.Add(actions);
         var googleCalendar=Btn(L.T("添加到 Google 日历"),AddToGoogleCalendar); googleCalendar.Width=235; editor.Controls.Add(googleCalendar);
+        var currencyAudit=Btn(L.T("检查疑似日元"),CheckPossibleJpy); currencyAudit.Width=235; editor.Controls.Add(currencyAudit);
         editor.Controls.Add(Btn(L.T("取消编辑 / 清空"),delegate{Reset();}));
         status.Dock=DockStyle.Fill; status.TextAlign=ContentAlignment.BottomLeft; status.ForeColor=Color.DimGray; status.AutoEllipsis=true; status.Text=L.T("数据库：")+dbPath; root.Controls.Add(status,0,4);
         month.ValueChanged+=delegate{RefreshData();}; all.CheckedChanged+=delegate{month.Enabled=!all.Checked;RefreshData();}; filter.SelectedIndexChanged+=delegate{RefreshData();}; search.TextChanged+=delegate{RefreshData();}; showTimes.CheckedChanged+=delegate{RefreshData();}; FormClosed+=delegate{db.Dispose();}; RegisterText(this); language.SelectedIndexChanged+=delegate{ChangeLanguage();}; RefreshData();
@@ -141,6 +142,12 @@ public class LedgerForm : Form {
         Process.Start(url);
         status.Text=L.T("已打开 Google 日历，请在浏览器中确认保存。")+" · "+L.T("数据库：")+dbPath;
     }
+    void CheckPossibleJpy() {
+        using(var dialog=new CurrencyAuditDialog(db)) {
+            if(!dialog.HasCandidates) { MessageBox.Show(this,L.T("未发现单笔超过 100 的人民币或港币记录。"),L.T("检查疑似日元"),MessageBoxButtons.OK,MessageBoxIcon.Information);return; }
+            dialog.ShowDialog(this);if(dialog.Changed)RefreshData();
+        }
+    }
     void Backup() {
         using(var d=new SaveFileDialog{Filter=L.T("SQLite 数据库|*.db"),FileName=L.T("账本备份-")+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".db"})if(d.ShowDialog(this)==DialogResult.OK){if(string.Equals(Path.GetFullPath(d.FileName),Path.GetFullPath(dbPath),StringComparison.OrdinalIgnoreCase))throw new Exception(L.T("请选择与当前数据库不同的备份路径。")); db.Backup(d.FileName);MessageBox.Show(this,L.T("备份已保存：\n")+d.FileName,L.T("备份完成"));}
     }
@@ -180,4 +187,3 @@ public class LedgerForm : Form {
         File.Delete(path);File.Delete(backup);File.WriteAllText(Path.Combine(folder,"test-result.txt"),"PASS: amount precision, JPY validation, Unicode, SQL quoting, currency grouping, update, persistence, delete, SQLite backup.");
     }
 }
-
