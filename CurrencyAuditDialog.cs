@@ -73,6 +73,7 @@ public sealed class CurrencyAuditDialog : Form {
     void ClearAll() { foreach(DataGridViewRow row in grid.Rows)row.Cells[0].Value=false; }
 
     void ConvertSelected() {
+        if(!CurrencyCatalog.IsActive("JPY"))throw new Exception(L.T("请先在币种管理中恢复 JPY 日元。"));
         grid.EndEdit(); List<long> ids=new List<long>();
         foreach(DataGridViewRow row in grid.Rows)if(Convert.ToBoolean(row.Cells[0].Value))ids.Add(Int64.Parse(row.Cells[1].Value.ToString(),CultureInfo.InvariantCulture));
         if(ids.Count==0)throw new Exception(L.T("请至少选择一条可转换的记录。"));

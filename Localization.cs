@@ -42,6 +42,34 @@ public static class L {
         {"删除所选", new string[]{"删除所选","選択項目を削除","Delete selected"}},
         {"添加到 Google 日历", new string[]{"添加到 Google 日历","Google カレンダーに追加","Add to Google Calendar"}},
         {"检查疑似日元", new string[]{"检查疑似日元","円の入力ミスを確認","Check possible JPY mistakes"}},
+        {"管理币种", new string[]{"管理币种","通貨を管理","Manage currencies"}},
+        {"第一行是新建账目时的默认币种。删除只会从选择列表隐藏，不会删除已有账目。", new string[]{"第一行是新建账目时的默认币种。删除只会从选择列表隐藏，不会删除已有账目。","先頭行は新規記録の既定通貨です。削除しても既存の記録は削除されません。","The first row is the default currency for new entries. Removing a currency does not delete existing entries."}},
+        {"默认", new string[]{"默认","既定","Default"}},
+        {"币种代码", new string[]{"币种代码","通貨コード","Currency code"}},
+        {"中文名称", new string[]{"中文名称","中国語名","Chinese name"}},
+        {"日文名称", new string[]{"日文名称","日本語名","Japanese name"}},
+        {"英文名称", new string[]{"英文名称","英語名","English name"}},
+        {"小数位数", new string[]{"小数位数","小数桁数","Decimal places"}},
+        {"添加币种", new string[]{"添加币种","通貨を追加","Add currency"}},
+        {"删除币种", new string[]{"删除币种","通貨を削除","Remove currency"}},
+        {"上移", new string[]{"上移","上へ","Move up"}},
+        {"下移", new string[]{"下移","下へ","Move down"}},
+        {"设为默认", new string[]{"设为默认","既定に設定","Set as default"}},
+        {"请先选择一个币种。", new string[]{"请先选择一个币种。","通貨を選択してください。","Select a currency first."}},
+        {"已恢复之前删除的币种及其原有设置。", new string[]{"已恢复之前删除的币种及其原有设置。","削除した通貨と以前の設定を復元しました。","The removed currency and its previous settings were restored."}},
+        {"币种已恢复", new string[]{"币种已恢复","通貨を復元しました","Currency restored"}},
+        {"从选择列表中删除这个币种？", new string[]{"从选择列表中删除这个币种？","この通貨を選択リストから削除しますか？","Remove this currency from the selection list?"}},
+        {"已有账目会保留，并继续显示原币种。以后可通过添加相同代码恢复。", new string[]{"已有账目会保留，并继续显示原币种。以后可通过添加相同代码恢复。","既存の記録は元の通貨表示のまま残ります。同じコードを追加すると復元できます。","Existing entries remain and keep their original currency. Add the same code later to restore it."}},
+        {"代码使用三个英文字母，例如 NOK。", new string[]{"代码使用三个英文字母，例如 NOK。","コードは NOK のような英字3文字です。","Use a three-letter code such as NOK."}},
+        {"添加", new string[]{"添加","追加","Add"}},
+        {"取消", new string[]{"取消","キャンセル","Cancel"}},
+        {"币种代码必须是三个英文字母。", new string[]{"币种代码必须是三个英文字母。","通貨コードは英字3文字で入力してください。","The currency code must contain three letters."}},
+        {"输入无效", new string[]{"输入无效","入力エラー","Invalid input"}},
+        {"请填写三种语言的币种名称。", new string[]{"请填写三种语言的币种名称。","3言語すべての通貨名を入力してください。","Enter the currency name in all three languages."}},
+        {"至少需要保留一个币种。", new string[]{"至少需要保留一个币种。","少なくとも1つの通貨を残してください。","Keep at least one currency."}},
+        {"该币种代码已存在。", new string[]{"该币种代码已存在。","この通貨コードは既に存在します。","This currency code already exists."}},
+        {"币种设置已更新。", new string[]{"币种设置已更新。","通貨設定を更新しました。","Currency settings updated."}},
+        {"请先在币种管理中恢复 JPY 日元。", new string[]{"请先在币种管理中恢复 JPY 日元。","先に通貨管理で JPY 日本円を復元してください。","Restore JPY in currency management first."}},
         {"疑似日元记录", new string[]{"疑似日元记录","円の可能性がある記録","Possible JPY entries"}},
         {"检测规则：人民币或港币单笔金额超过 100。含小数的记录需要手动编辑。", new string[]{"检测规则：人民币或港币单笔金额超过 100。含小数的记录需要手动编辑。","判定条件：中国元または香港ドルで 100 を超える記録。小数を含む記録は手動で編集してください。","Rule: CNY or HKD entries over 100. Entries with decimals require manual editing."}},
         {"选择", new string[]{"选择","選択","Select"}},
@@ -108,12 +136,11 @@ public static class L {
         {"当前筛选 · {0} 笔（各币种独立统计；不做汇率换算）", new string[]{"当前筛选 · {0} 笔（各币种独立统计；不做汇率换算）","絞り込み結果 · {0} 件（通貨別集計・為替換算なし）","Current filter · {0} entries (separate totals per currency; no conversion)"}},
         {"结余", new string[]{"结余","差引残高","Balance"}}
     };
-    static readonly string[][] Names={new string[]{"人民币","人民元","Chinese Yuan"},new string[]{"美元","米ドル","US Dollar"},new string[]{"欧元","ユーロ","Euro"},new string[]{"日元","日本円","Japanese Yen"},new string[]{"英镑","英ポンド","British Pound"},new string[]{"港币","香港ドル","Hong Kong Dollar"},new string[]{"澳元","豪ドル","Australian Dollar"},new string[]{"加元","カナダドル","Canadian Dollar"},new string[]{"新加坡元","シンガポールドル","Singapore Dollar"},new string[]{"韩元","韓国ウォン","South Korean Won"},new string[]{"瑞士法郎","スイスフラン","Swiss Franc"},new string[]{"新台币","台湾ドル","New Taiwan Dollar"}};
     public static string T(string key) { string[] values; return Texts.TryGetValue(key,out values)?values[Index]:key; }
     public static string Key(string text) { foreach(var p in Texts)if(p.Value[Index]==text)return p.Key; return text; }
     public static string CategoryKey(string text) { foreach(string key in Categories)if(T(key)==text)return key;return text; }
     public static string CategoryText(string key) { return Array.IndexOf(Categories,key)>=0?T(key):key; }
-    public static string Currency(string code) { int i=Array.IndexOf(LedgerForm.Currencies,code);return i<0?code:code+" "+Names[i][Index]; }
+    public static string Currency(string code) { return CurrencyCatalog.Display(code,Index); }
     static string SettingsPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"data","language.txt"); } }
     public static void Load() { try {int n;if(File.Exists(SettingsPath)&&int.TryParse(File.ReadAllText(SettingsPath),out n)&&n>=0&&n<=2)Index=n;}catch(IOException){}catch(UnauthorizedAccessException){} }
     public static void Save() { Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath));File.WriteAllText(SettingsPath,Index.ToString(CultureInfo.InvariantCulture)); }

@@ -25,6 +25,7 @@ public sealed class LedgerDb : IDisposable {
         if(sqlite3_open(Utf(path),out db)!=0) { if(db!=IntPtr.Zero)sqlite3_close(db); throw new Exception(L.T("无法打开数据库：")+path); }
         Run("PRAGMA busy_timeout=5000; PRAGMA journal_mode=DELETE; CREATE TABLE IF NOT EXISTS entries(id INTEGER PRIMARY KEY, day TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('收入','支出')), amount INTEGER NOT NULL CHECK(amount>0), currency TEXT NOT NULL, category TEXT NOT NULL, note TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '');");
         EnsureTimestampColumns();
+        CurrencyCatalog.Initialize(this);
     }
     void EnsureTimestampColumns() {
         DataTable columns=Run("PRAGMA table_info(entries)"); bool hasCreated=false,hasUpdated=false;

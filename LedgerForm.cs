@@ -9,14 +9,15 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 public class LedgerForm : Form {
-    public static readonly string[] Currencies={"CNY","USD","EUR","JPY","GBP","HKD","AUD","CAD","SGD","KRW","CHF","TWD"};
-    public static int Digits(string c) { return c=="JPY"||c=="KRW" ? 0 : 2; }
+    public static string[] Currencies { get { return CurrencyCatalog.ActiveCodes; } }
+    public static int Digits(string c) { return CurrencyCatalog.Digits(c); }
+    static decimal Factor(string c) { decimal value=1m;for(int i=0;i<Digits(c);i++)value*=10m;return value; }
     public static long Minor(decimal amount,string c) {
         int digits=Digits(c); if(amount<=0 || amount>1000000000000m)throw new Exception(L.T("金额必须大于 0，且不超过一万亿。"));
         if(decimal.Round(amount,digits)!=amount)throw new Exception(c+L.T(" 金额最多允许 ")+digits+L.T(" 位小数。"));
-        return (long)(amount*(digits==0?1m:100m));
+        return (long)(amount*Factor(c));
     }
-    static string Money(long n,string c) { return ((decimal)n/(Digits(c)==0?1m:100m)).ToString("N"+Digits(c),CultureInfo.CurrentCulture); }
+    static string Money(long n,string c) { return ((decimal)n/Factor(c)).ToString("N"+Digits(c),CultureInfo.CurrentCulture); }
     LedgerDb db; string dbPath; long editing=0;
     DateTimePicker day=new DateTimePicker(), month=new DateTimePicker();
     ComboBox language=new ComboBox(); bool switching=false;
@@ -46,12 +47,14 @@ public class LedgerForm : Form {
         var actions=new FlowLayoutPanel{Width=240,Height=78}; actions.Controls.Add(Btn(L.T("编辑所选"),delegate{Edit();})); actions.Controls.Add(Btn(L.T("删除所选"),Delete)); editor.Controls.Add(actions);
         var googleCalendar=Btn(L.T("添加到 Google 日历"),AddToGoogleCalendar); googleCalendar.Width=235; editor.Controls.Add(googleCalendar);
         var currencyAudit=Btn(L.T("检查疑似日元"),CheckPossibleJpy); currencyAudit.Width=235; editor.Controls.Add(currencyAudit);
+        var currencyManager=Btn(L.T("管理币种"),ManageCurrencies); currencyManager.Width=235; editor.Controls.Add(currencyManager);
         editor.Controls.Add(Btn(L.T("取消编辑 / 清空"),delegate{Reset();}));
         status.Dock=DockStyle.Fill; status.TextAlign=ContentAlignment.BottomLeft; status.ForeColor=Color.DimGray; status.AutoEllipsis=true; status.Text=L.T("数据库：")+dbPath; root.Controls.Add(status,0,4);
         month.ValueChanged+=delegate{RefreshData();}; all.CheckedChanged+=delegate{month.Enabled=!all.Checked;RefreshData();}; filter.SelectedIndexChanged+=delegate{RefreshData();}; search.TextChanged+=delegate{RefreshData();}; showTimes.CheckedChanged+=delegate{RefreshData();}; FormClosed+=delegate{db.Dispose();}; RegisterText(this); language.SelectedIndexChanged+=delegate{ChangeLanguage();}; RefreshData();
     }
 
-    string CurrencyCode { get { return ((CurrencyItem)currency.SelectedItem).Code; } }
+    string CurrencyCode { get { CurrencyItem item=currency.SelectedItem as CurrencyItem;return item==null?(Currencies.Length==0?"":Currencies[0]):item.Code; } }
+    string FilterCurrencyCode { get { CurrencyItem item=filter.SelectedItem as CurrencyItem;return item==null?"":item.Code; } }
     string KindCode { get { return kind.SelectedIndex==0?"支出":"收入"; } }
     void RegisterText(Control parent) {
         if(parent is Label || parent is Button || parent is CheckBox || parent is Form)parent.Tag=L.Key(parent.Text);
@@ -63,21 +66,29 @@ public class LedgerForm : Form {
     }
     void ChangeLanguage() {
         if(switching)return;
-        int k=kind.SelectedIndex,c=currency.SelectedIndex,f=filter.SelectedIndex;
+        int k=kind.SelectedIndex;string selectedCurrency=CurrencyCode,selectedFilter=FilterCurrencyCode;
         string cat=L.CategoryKey(category.Text); long selected=grid.SelectedRows.Count==0?0:long.Parse(grid.SelectedRows[0].Cells[0].Value.ToString());
         switching=true;
         try {
             L.Index=language.SelectedIndex; TranslateText(this);
             kind.Items.Clear();kind.Items.AddRange(new string[]{L.T("支出"),L.T("收入")});kind.SelectedIndex=k;
-            currency.Items.Clear();filter.Items.Clear();filter.Items.Add(L.T("全部币种"));
-            foreach(string code in Currencies){currency.Items.Add(new CurrencyItem(code));filter.Items.Add(new CurrencyItem(code));}
-            currency.SelectedIndex=c;filter.SelectedIndex=f;
+            RebuildCurrencySelectors(selectedCurrency,selectedFilter);
             category.Items.Clear();foreach(string key in L.Categories)category.Items.Add(L.T(key));category.Text=L.CategoryText(cat);
             editorTitle.Text=editing==0?L.T("记一笔"):L.T("编辑账目 #")+editing;save.Text=L.T(editing==0?"保存这笔账":"保存修改");status.Text=L.T("数据库：")+dbPath;
         } finally { switching=false; }
         RefreshData();
         foreach(DataGridViewRow row in grid.Rows)if(long.Parse(row.Cells[0].Value.ToString())==selected)row.Selected=true;
         try {L.Save();}catch(Exception ex){MessageBox.Show(this,ex.Message,L.T("操作未完成"));}
+    }
+    void RebuildCurrencySelectors(string selectedCurrency,string selectedFilter) {
+        currency.Items.Clear();filter.Items.Clear();filter.Items.Add(L.T("全部币种"));
+        foreach(string code in Currencies) { currency.Items.Add(new CurrencyItem(code));filter.Items.Add(new CurrencyItem(code)); }
+        if(selectedCurrency!=""&&!CurrencyCatalog.IsActive(selectedCurrency))currency.Items.Add(new CurrencyItem(selectedCurrency));
+        SelectCurrency(currency,selectedCurrency);SelectCurrency(filter,selectedFilter);if(filter.SelectedIndex<0)filter.SelectedIndex=0;
+    }
+    static void SelectCurrency(ComboBox box,string code) {
+        for(int i=0;i<box.Items.Count;i++) { CurrencyItem item=box.Items[i] as CurrencyItem;if(item!=null&&String.Equals(item.Code,code,StringComparison.OrdinalIgnoreCase)){box.SelectedIndex=i;return;} }
+        if(box.Items.Count>0)box.SelectedIndex=0;
     }
     Button Btn(string text,Action action) { var b=new Button{Text=text,AutoSize=true,Height=32,FlatStyle=FlatStyle.Flat,BackColor=Color.White,Margin=new Padding(3,0,5,4)}; b.Click+=delegate{try{action();}catch(Exception ex){MessageBox.Show(this,ex.Message,L.T("操作未完成"),MessageBoxButtons.OK,MessageBoxIcon.Warning);}};return b; }
     void AddField(FlowLayoutPanel p,string label,Control c) { p.Controls.Add(new Label{Text=label,AutoSize=true,Margin=new Padding(3,4,0,2)}); c.Width=235;p.Controls.Add(c); }
@@ -116,10 +127,10 @@ public class LedgerForm : Form {
     long Selected() { if(grid.SelectedRows.Count==0)throw new Exception(L.T("请先选择一条账目。"));return long.Parse(grid.SelectedRows[0].Cells[0].Value.ToString()); }
     void Edit() {
         long id=Selected(); DataTable t=db.Run("SELECT day,kind,amount,currency,category,note FROM entries WHERE id="+id); if(t.Rows.Count==0)throw new Exception(L.T("这条记录已不存在。")); DataRow r=t.Rows[0]; editing=id;
-        day.Value=DateTime.ParseExact(r[0].ToString(),"yyyy-MM-dd",CultureInfo.InvariantCulture); kind.SelectedIndex=r[1].ToString()=="支出"?0:1; currency.SelectedIndex=Array.IndexOf(Currencies,r[3].ToString()); amount.Text=((decimal)long.Parse(r[2].ToString())/(Digits(CurrencyCode)==0?1:100)).ToString(CultureInfo.CurrentCulture); category.Text=L.CategoryText(r[4].ToString()); note.Text=r[5].ToString(); editorTitle.Text=L.T("编辑账目 #")+id;save.Text=L.T("保存修改");
+        day.Value=DateTime.ParseExact(r[0].ToString(),"yyyy-MM-dd",CultureInfo.InvariantCulture); kind.SelectedIndex=r[1].ToString()=="支出"?0:1; SelectCurrency(currency,r[3].ToString());if(!String.Equals(CurrencyCode,r[3].ToString(),StringComparison.OrdinalIgnoreCase)){currency.Items.Add(new CurrencyItem(r[3].ToString()));currency.SelectedIndex=currency.Items.Count-1;} amount.Text=((decimal)long.Parse(r[2].ToString())/Factor(r[3].ToString())).ToString(CultureInfo.CurrentCulture); category.Text=L.CategoryText(r[4].ToString()); note.Text=r[5].ToString(); editorTitle.Text=L.T("编辑账目 #")+id;save.Text=L.T("保存修改");
     }
     void Delete() { long id=Selected(); if(MessageBox.Show(this,L.T("确定删除所选账目？此操作无法撤销。"),L.T("删除账目"),MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return; db.Run("DELETE FROM entries WHERE id="+id); if(editing==id)Reset();RefreshData(); }
-    void Reset() { editing=0; editorTitle.Text=L.T("记一笔");save.Text=L.T("保存这笔账"); amount.Clear();note.Clear();day.Value=DateTime.Today; }
+    void Reset() { editing=0; editorTitle.Text=L.T("记一笔");save.Text=L.T("保存这笔账"); amount.Clear();note.Clear();day.Value=DateTime.Today;if(currency.Items.Count>0)currency.SelectedIndex=0; }
     static string DisplayTime(string value) { return String.IsNullOrWhiteSpace(value)?L.T("未知"):value; }
     public static string GoogleCalendarUrl(string entryDay,string entryKind,long entryAmount,string entryCurrency,string entryCategory,string entryNote) {
         DateTime start=DateTime.ParseExact(entryDay,"yyyy-MM-dd",CultureInfo.InvariantCulture);
@@ -146,6 +157,15 @@ public class LedgerForm : Form {
         using(var dialog=new CurrencyAuditDialog(db)) {
             if(!dialog.HasCandidates) { MessageBox.Show(this,L.T("未发现单笔超过 100 的人民币或港币记录。"),L.T("检查疑似日元"),MessageBoxButtons.OK,MessageBoxIcon.Information);return; }
             dialog.ShowDialog(this);if(dialog.Changed)RefreshData();
+        }
+    }
+    void ManageCurrencies() {
+        using(var dialog=new CurrencyManagerDialog(db)) {
+            dialog.ShowDialog(this);if(!dialog.Changed)return;
+            string selected=editing==0?"":CurrencyCode,selectedFilter=FilterCurrencyCode;switching=true;
+            try { RebuildCurrencySelectors(selected,selectedFilter); }
+            finally { switching=false; }
+            RefreshData();status.Text=L.T("币种设置已更新。")+" · "+L.T("数据库：")+dbPath;
         }
     }
     void Backup() {
