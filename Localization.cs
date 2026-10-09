@@ -27,6 +27,8 @@ public static class L {
         {"暂无记录", new string[]{"暂无记录","記録なし","No entries"}},
         {"记一笔", new string[]{"记一笔","新規記録","New entry"}},
         {"日期", new string[]{"日期","日付","Date"}},
+        {"前一天", new string[]{"前一天","前日","-1 day"}},
+        {"后一天", new string[]{"后一天","翌日","+1 day"}},
         {"类型", new string[]{"类型","種類","Type"}},
         {"支出", new string[]{"支出","支出","Expense"}},
         {"收入", new string[]{"收入","収入","Income"}},

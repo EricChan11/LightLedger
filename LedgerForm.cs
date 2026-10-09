@@ -39,7 +39,11 @@ public class LedgerForm : Form {
         grid.Dock=DockStyle.Fill; grid.ReadOnly=true; grid.AllowUserToAddRows=false; grid.AllowUserToDeleteRows=false; grid.SelectionMode=DataGridViewSelectionMode.FullRowSelect; grid.MultiSelect=false; grid.AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill; grid.RowHeadersVisible=false; grid.BackgroundColor=Color.White; grid.BorderStyle=BorderStyle.None; grid.AutoGenerateColumns=true; grid.RowTemplate.Height=32; grid.ColumnHeadersHeight=38; grid.CellDoubleClick+=delegate(object s,DataGridViewCellEventArgs e){if(e.RowIndex>=0) { try{Edit();}catch(Exception ex){MessageBox.Show(this,ex.Message,L.T("操作未完成"));} }}; body.Controls.Add(grid,0,0);
         var editor=new FlowLayoutPanel{Dock=DockStyle.Fill,FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoScroll=true,Padding=new Padding(16,0,0,0)}; body.Controls.Add(editor,1,0);
         editorTitle.Text=L.T("记一笔"); editorTitle.Font=new Font(Font.FontFamily,14,FontStyle.Bold); editorTitle.Height=34; editorTitle.Width=230; editor.Controls.Add(editorTitle);
-        day.Format=DateTimePickerFormat.Custom; day.CustomFormat="yyyy-MM-dd"; AddField(editor,L.T("日期"),day);
+        day.Format=DateTimePickerFormat.Custom; day.CustomFormat="yyyy-MM-dd"; day.Width=95; day.Margin=new Padding(0);
+        var dayControls=new FlowLayoutPanel{Width=235,Height=32,WrapContents=false,Margin=new Padding(0)};
+        var previousDay=Btn(L.T("前一天"),delegate{ShiftDay(-1);});previousDay.AutoSize=false;previousDay.Width=70;previousDay.Margin=new Padding(0);
+        var nextDay=Btn(L.T("后一天"),delegate{ShiftDay(1);});nextDay.AutoSize=false;nextDay.Width=70;nextDay.Margin=new Padding(0);
+        dayControls.Controls.AddRange(new Control[]{day,previousDay,nextDay});AddField(editor,L.T("日期"),dayControls);
         kind.DropDownStyle=ComboBoxStyle.DropDownList; kind.Items.AddRange(new string[]{L.T("支出"),L.T("收入")}); kind.SelectedIndex=0; AddField(editor,L.T("类型"),kind);
         currency.DropDownStyle=ComboBoxStyle.DropDownList; foreach(string code in Currencies)currency.Items.Add(new CurrencyItem(code)); currency.SelectedIndex=0; AddField(editor,L.T("币种（CNY 人民币 / JPY 日元）"),currency);
         AddField(editor,L.T("金额（填写正数）"),amount); category.Items.AddRange(new string[]{L.T("餐饮"),L.T("交通"),L.T("购物"),L.T("住房"),L.T("娱乐"),L.T("医疗"),L.T("工资"),L.T("奖金"),L.T("其他")}); category.Text=L.T("餐饮"); AddField(editor,L.T("分类"),category);
@@ -91,6 +95,7 @@ public class LedgerForm : Form {
         if(box.Items.Count>0)box.SelectedIndex=0;
     }
     Button Btn(string text,Action action) { var b=new Button{Text=text,AutoSize=true,Height=32,FlatStyle=FlatStyle.Flat,BackColor=Color.White,Margin=new Padding(3,0,5,4)}; b.Click+=delegate{try{action();}catch(Exception ex){MessageBox.Show(this,ex.Message,L.T("操作未完成"),MessageBoxButtons.OK,MessageBoxIcon.Warning);}};return b; }
+    void ShiftDay(int days) { if(days<0&&day.Value.Date<=day.MinDate.Date)return;if(days>0&&day.Value.Date>=day.MaxDate.Date)return;day.Value=day.Value.AddDays(days); }
     void AddField(FlowLayoutPanel p,string label,Control c) { p.Controls.Add(new Label{Text=label,AutoSize=true,Margin=new Padding(3,4,0,2)}); c.Width=235;p.Controls.Add(c); }
     string Where() {
         string w=" WHERE 1=1"; if(!all.Checked)w+=" AND substr(day,1,7)="+LedgerDb.Q(month.Value.ToString("yyyy-MM")); if(filter.SelectedIndex>0)w+=" AND currency="+LedgerDb.Q(((CurrencyItem)filter.SelectedItem).Code);
